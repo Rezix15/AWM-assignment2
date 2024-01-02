@@ -1,0 +1,544 @@
+<!-- templates/home.html-->
+{% extends "base.html" %}
+{% load leaflet_tags %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+  {% if user.is_authenticated %}
+
+    <!-- A navbar displayed on the top of the page. -->
+        <nav class="navbar navbar-expand-sm bg-dark">
+        <div class="container-fluid">
+            <!-- Links -->
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" style="color:white;">Home</a>
+                </li>
+
+                <li>
+                    <a class = "nav-link" href="{% url 'logout' %}" style="color:white;">Logout</a>
+                </li>
+            </ul>
+        </div>
+        </nav>
+    <br><h3 style="text-align: center;" >Hello {{ user.username }} </h3></br>
+    <script>
+    function map_init (map, options) {
+        if (!navigator.geolocation) {
+            console.log("error")
+        } else {
+            navigator.geolocation.getCurrentPosition(success);
+            updateLocation(map)
+        }
+
+        function success(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+            console.log(accuracy);
+            L.marker([latitude.valueOf(), longitude.valueOf()]).addTo(map);
+            L.circle([latitude.valueOf(), longitude.valueOf()], {radius:accuracy}).addTo(map);
+        }
+    }
+    var HOST = location.protocol + "//" + location.host;
+    var locationMarker;
+    var circle;
+
+
+    function map_init_basic(map, options) {
+      var pos;
+      map.setView([53.5, -8.5], 11);
+
+      $.ajax({
+          url: HOST + "/get_location_data/",
+          type: 'GET',
+          dataType: 'json',
+          success: function (data) {
+
+              var hotelsGeoJSON = JSON.parse(data.hotels);
+              var restaurantsGeoJSON = JSON.parse(data.restaurants);
+              var librariesGeoJSON = JSON.parse(data.libraries);
+              var parksGeoJSON = JSON.parse(data.parks);
+
+              //Orange icon that will be the new marker icon for the restaurants to make viewing easier
+              var orangeIcon = new L.Icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              });
+
+              //Yellow icon that will be the new marker icon for the libraries to make viewing easier
+              var yellowIcon = new L.Icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              });
+
+              //Green icon that will be the new marker icon for the parks to make viewing easier
+              var greenIcon = new L.Icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              });
+
+              // Showcase the first 25 datasets for hotels
+              for (let i = 0; i < 25; i++)
+              {
+
+                  // Add hotel markers with popups
+                  const hotel_marker = L.marker(hotelsGeoJSON.features[i].geometry.coordinates).addTo(map);
+
+                  // Bind popup to the hotels marker and display the name and location point
+                  hotel_marker.bindPopup(`
+                    <p><strong>${hotelsGeoJSON.features[i].properties.name}</strong></p>
+                    <p>Location: [${hotelsGeoJSON.features[i].geometry.coordinates}]</p>
+                    <hr>
+                    <p style="text-decoration: underline">Additional information</p>
+                    <table>
+                        ${hotelsGeoJSON.features[i].properties.city ?
+                        `<tr><td>City:</td><td>${hotelsGeoJSON.features[i].properties.city}</td></tr>` : ''}
+
+                        ${hotelsGeoJSON.features[i].properties.street ?
+                        `<tr><td>Street:</td><td>${hotelsGeoJSON.features[i].properties.street}</td></tr>` : ''}
+
+                        ${hotelsGeoJSON.features[i].properties.phone ?
+                        `<tr><td>Phone:</td><td><a href = "tel:+${hotelsGeoJSON.features[i].properties.phone}">${hotelsGeoJSON.features[i].properties.phone}</a></td></tr>` : ''}
+
+                        ${hotelsGeoJSON.features[i].properties.wheelchair ?
+                        `<tr><td>Wheelchair?:</td><td>${hotelsGeoJSON.features[i].properties.wheelchair}</td>` : ''}
+
+                        ${hotelsGeoJSON.features[i].properties.website ?
+                        `<tr><td>Website:</td><td><a href = "${hotelsGeoJSON.features[i].properties.website}">${hotelsGeoJSON.features[i].properties.website}</a></td></tr>` : ''}
+                    </table>
+                `);
+              }
+
+              // Showcase the first 25 datasets for restaurants
+              for(let i = 0; i < 25; i++)
+              {
+                  // Add restaurant markers with popups
+                  const restaurant_marker = L.marker(restaurantsGeoJSON.features[i].geometry.coordinates, { icon: orangeIcon }).addTo(map);
+
+                  // Bind popup to the restaurant marker and display the name and location point. Display additional
+                  // info in the form of a table.
+                    restaurant_marker.bindPopup(`
+                    <p><strong>${restaurantsGeoJSON.features[i].properties.name}</strong></p>
+                    <p>Location: [${restaurantsGeoJSON.features[i].geometry.coordinates}]</p>
+                    <hr>
+                    <p style="text-decoration: underline">Additional information</p>
+                    <table>
+                        ${restaurantsGeoJSON.features[i].properties.cuisine ?
+                        `<tr><td>Cuisine:</td><td>${restaurantsGeoJSON.features[i].properties.cuisine}</td></tr>` : ''}
+
+                        ${restaurantsGeoJSON.features[i].properties.city ?
+                        `<tr><td>City:</td><td>${restaurantsGeoJSON.features[i].properties.city}</td></tr>` : ''}
+
+                        ${restaurantsGeoJSON.features[i].properties.street ?
+                        `<tr><td>Street:</td><td>${restaurantsGeoJSON.features[i].properties.street}</td></tr>` : ''}
+
+                        ${restaurantsGeoJSON.features[i].properties.opening_hours ?
+                        `<tr><td>Opening Hours:</td><td>${restaurantsGeoJSON.features[i].properties.opening_hours}</td>` : ''}
+
+                        ${restaurantsGeoJSON.features[i].properties.wheelchair ?
+                        `<tr><td>Wheelchair?:</td><td>${restaurantsGeoJSON.features[i].properties.wheelchair}</td>` : ''}
+
+                        ${restaurantsGeoJSON.features[i].properties.website ?
+                        `<tr><td>Website:</td><td><a href = "${restaurantsGeoJSON.features[i].properties.website}">${restaurantsGeoJSON.features[i].properties.website}</a></td>` : ''}
+                        </tr>
+                    </table>
+                    `);
+              }
+
+              // Showcase the first 15 datasets for libraries
+              for (let i = 0; i < 25; i++)
+              {
+
+                  // Add hotel markers with popups
+                  const library_marker = L.marker(librariesGeoJSON.features[i].geometry.coordinates, { icon: yellowIcon }).addTo(map);
+
+                  // Bind popup to the hotels marker and display the name and location point
+                  library_marker.bindPopup(`
+                    <p><strong>${librariesGeoJSON.features[i].properties.name}</strong></p>
+                    <p>Location: [${librariesGeoJSON.features[i].geometry.coordinates}]</p>
+                    <hr>
+                    <p style="text-decoration: underline">Additional information</p>
+                    <table>
+                        ${librariesGeoJSON.features[i].properties.city ?
+                        `<tr><td>City:</td><td>${librariesGeoJSON.features[i].properties.city}</td></tr>` : ''}
+
+                        ${librariesGeoJSON.features[i].properties.street ?
+                        `<tr><td>Street:</td><td>${librariesGeoJSON.features[i].properties.street}</td></tr>` : ''}
+
+                        ${librariesGeoJSON.features[i].properties.phone ?
+                        `<tr><td>Phone:</td><td><a href = "tel:+${librariesGeoJSON.features[i].properties.phone}">${librariesGeoJSON.features[i].properties.phone}</a></td></tr>` : ''}
+
+                        ${librariesGeoJSON.features[i].properties.wheelchair ?
+                        `<tr><td>Wheelchair?:</td><td>${librariesGeoJSON.features[i].properties.wheelchair}</td>` : ''}
+
+                        ${librariesGeoJSON.features[i].properties.website ?
+                        `<tr><td>Website:</td><td><a href = "${librariesGeoJSON.features[i].properties.website}">${librariesGeoJSON.features[i].properties.website}</a></td></tr>` : ''}
+                    </table>
+                `);
+              }
+
+              // Showcase the first 10 datasets for parks
+              for (let i = 0; i < 10; i++)
+              {
+
+                  // Add hotel markers with popups
+                  const park_marker = L.marker(parksGeoJSON.features[i].geometry.coordinates, { icon: greenIcon }).addTo(map);
+
+                  // Bind popup to the hotels marker and display the name and location point
+                  park_marker.bindPopup(`
+                    <p><strong>${parksGeoJSON.features[i].properties.name}</strong></p>
+                    <p>Location: [${parksGeoJSON.features[i].geometry.coordinates}]</p>
+                `);
+              }
+
+
+          },
+          error: function (error) {
+              console.log(error);
+          }
+        });
+
+        //Take search result from our form below and see whether it closely matches a name of the hotel, restaurant, library or park
+        //from the GeoJSON found in the /search_data
+        const search_form = document.getElementById('SearchForm');
+        const search_bar = document.getElementById('search-bar');
+        const search_found = document.getElementById('searched_found');
+
+        search_form.addEventListener('submit', function(event)
+        {
+            event.preventDefault();
+            var searchResult = $(search_bar).val();
+
+            $.ajax({
+               url: HOST + '/search_data/',
+               type: 'GET',
+               headers: {
+                  'X-CSRFToken': "{{ csrf_token }}"
+                },
+               data: {
+                   search_result: searchResult
+               },
+               success: function(data) {
+                  var hotelsGeoJSON = JSON.parse(data.hotels);
+                  var restaurantsGeoJSON = JSON.parse(data.restaurants);
+                  var librariesGeoJSON = JSON.parse(data.libraries);
+                  var parksGeoJSON = JSON.parse(data.parks);
+
+                  //Violet icon that will be the new marker icon for the restaurants to make viewing easier
+                  var violetIcon = new L.Icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                  });
+
+                  //Reset map icon positions for the search results
+                  map.removeLayer(violetIcon);
+
+
+                  for (let i = 0; i < Math.min(hotelsGeoJSON.features.length, 15); i++)
+                  {
+                      // Add hotel markers with popups
+                      const hotel_marker = L.marker(hotelsGeoJSON.features[i].geometry.coordinates,
+                      { icon: violetIcon }).addTo(map);
+
+                        // Bind popup to the hotels marker and display the name and location point Display additional
+                        // info in the form of a table.
+
+                        hotel_marker.bindPopup(`
+                            <p><strong>${hotelsGeoJSON.features[i].properties.name}</strong></p>
+                            <p>Location: [${hotelsGeoJSON.features[i].geometry.coordinates}]</p>
+                            <hr>
+                            <p style="text-decoration: underline">Additional information</p>
+
+                            <table>
+                                ${hotelsGeoJSON.features[i].properties.city ?
+                                `<tr><td>City:</td><td>${hotelsGeoJSON.features[i].properties.city}</td></tr>` : ''}
+
+                                ${hotelsGeoJSON.features[i].properties.street ?
+                                `<tr><td>Street:</td><td>${hotelsGeoJSON.features[i].properties.street}</td></tr>` : ''}
+
+                                ${hotelsGeoJSON.features[i].properties.phone ?
+                                `<tr><td>Phone:</td><td><a href = "tel:+${hotelsGeoJSON.features[i].properties.phone}">${hotelsGeoJSON.features[i].properties.phone}</a></td></tr>` : ''}
+
+                                ${hotelsGeoJSON.features[i].properties.wheelchair ?
+                                `<tr><td>Wheelchair?:</td><td>${hotelsGeoJSON.features[i].properties.wheelchair}</td>` : ''}
+
+                                ${hotelsGeoJSON.features[i].properties.website ?
+                                `<tr><td>Website:</td><td><a href = "${hotelsGeoJSON.features[i].properties.website}">${hotelsGeoJSON.features[i].properties.website}</a></td></tr>` : ''}
+                            </table>
+                        `);
+
+                        $(search_found).text(
+                            searchResult + " found as: " + hotelsGeoJSON.features[i].properties.name
+                               + " at co-ordinates: " + "[" + hotelsGeoJSON.features[i].geometry.coordinates + "]");
+                  }
+
+                  // Showcase the first 15 datasets for restaurants
+                  for(let i = 0; i < Math.min(restaurantsGeoJSON.features.length, 15); i++)
+                  {
+                        map.removeLayer(violetIcon);
+                        // Add restaurant markers with popups
+                        const restaurant_marker = L.marker(restaurantsGeoJSON.features[i].geometry.coordinates, { icon: violetIcon }).addTo(map);
+
+                        // Bind popup to the restaurant marker and display the name and location point
+                        restaurant_marker.bindPopup(`<p><strong>${restaurantsGeoJSON.features[i].properties.name}</strong></p>
+                        <p>Location: [${restaurantsGeoJSON.features[i].geometry.coordinates}]</p>
+                        <hr>
+                        <p style="text-decoration: underline">Additional information</p>
+                        <table>
+                            ${restaurantsGeoJSON.features[i].properties.cuisine ?
+                            `<tr><td>Cuisine:</td><td>${restaurantsGeoJSON.features[i].properties.cuisine}</td></tr>` : ''}
+
+                            ${restaurantsGeoJSON.features[i].properties.city ?
+                            `<tr><td>City:</td><td>${restaurantsGeoJSON.features[i].properties.city}</td></tr>` : ''}
+
+                            ${restaurantsGeoJSON.features[i].properties.street ?
+                            `<tr><td>Street:</td><td>${restaurantsGeoJSON.features[i].properties.street}</td></tr>` : ''}
+
+                            ${restaurantsGeoJSON.features[i].properties.opening_hours ?
+                            `<tr><td>Opening Hours:</td><td>${restaurantsGeoJSON.features[i].properties.opening_hours}</td>` : ''}
+
+                            ${restaurantsGeoJSON.features[i].properties.wheelchair ?
+                            `<tr><td>Wheelchair?:</td><td>${restaurantsGeoJSON.features[i].properties.wheelchair}</td>` : ''}
+
+                            ${restaurantsGeoJSON.features[i].properties.website ?
+                            `<tr><td>Website:</td><td><a href = "${restaurantsGeoJSON.features[i].properties.website}">${restaurantsGeoJSON.features[i].properties.website}</a></td>` : ''}
+                            </tr>
+                        </table>
+                    `);
+
+                      $(search_found).text(
+                            searchResult + " found as: " + restaurantsGeoJSON.features[i].properties.name
+                               + " at co-ordinates: " + "[" + restaurantsGeoJSON.features[i].geometry.coordinates + "]");
+                  }
+
+                  // Showcase the first 10 datasets for libraries
+                  for (let i = 0; i < Math.min(librariesGeoJSON.features.length, 10); i++)
+                  {
+
+                      // Add hotel markers with popups
+                      const library_marker = L.marker(librariesGeoJSON.features[i].geometry.coordinates, { icon: violetIcon }).addTo(map);
+
+                      // Bind popup to the hotels marker and display the name and location point
+                      library_marker.bindPopup(`
+                        <p><strong>${librariesGeoJSON.features[i].properties.name}</strong></p>
+                        <p>Location: [${librariesGeoJSON.features[i].geometry.coordinates}]</p>
+                        <hr>
+                        <p style="text-decoration: underline">Additional information</p>
+                        <table>
+                            ${librariesGeoJSON.features[i].properties.city ?
+                            `<tr><td>City:</td><td>${librariesGeoJSON.features[i].properties.city}</td></tr>` : ''}
+
+                            ${librariesGeoJSON.features[i].properties.street ?
+                            `<tr><td>Street:</td><td>${librariesGeoJSON.features[i].properties.street}</td></tr>` : ''}
+
+                            ${librariesGeoJSON.features[i].properties.phone ?
+                            `<tr><td>Phone:</td><td><a href = "tel:+${librariesGeoJSON.features[i].properties.phone}">${librariesGeoJSON.features[i].properties.phone}</a></td></tr>` : ''}
+
+                            ${librariesGeoJSON.features[i].properties.wheelchair ?
+                            `<tr><td>Wheelchair?:</td><td>${librariesGeoJSON.features[i].properties.wheelchair}</td>` : ''}
+
+                            ${librariesGeoJSON.features[i].properties.website ?
+                            `<tr><td>Website:</td><td>$<a href = "${librariesGeoJSON.features[i].properties.website}">${librariesGeoJSON.features[i].properties.website}</a></td></tr>` : ''}
+                        </table>
+                    `);
+
+                    $(search_found).text(
+                            searchResult + " found as: " + librariesGeoJSON.features[i].properties.name
+                               + " at co-ordinates: " + "[" + librariesGeoJSON.features[i].geometry.coordinates + "]");
+                  }
+
+                  // Showcase the first 5 datasets for parks
+                  for (let i = 0; i < 5; i++)
+                  {
+                      // Add hotel markers with popups
+                      const park_marker = L.marker(parksGeoJSON.features[i].geometry.coordinates, { icon: violetIcon }).addTo(map);
+
+                      // Bind popup to the hotels marker and display the name and location point
+                      park_marker.bindPopup(`
+                        <p><strong>${parksGeoJSON.features[i].properties.name}</strong></p>
+                        <p>Location: [${parksGeoJSON.features[i].geometry.coordinates}]</p>
+                    `);
+
+                    $(search_found).text(
+                            searchResult + " found as: " + parksGeoJSON.features[i].properties.name
+                               + " at co-ordinates: " + "[" + parksGeoJSON.features[i].geometry.coordinates + "]");
+                  }
+               },
+
+               error: function (error) {
+                  console.log(error);
+               }
+            });
+        });
+
+        updateLocation(map);
+        map.on('touchstart click dblclick ', function () {
+            updateLocation(map);
+        });
+      }
+
+
+      function setMapToCurrentLocation(map, pos) {
+          console.log("In setMapToCurrentLocation.");
+          var myLatLon = L.latLng(pos.coords.latitude,
+          pos.coords.longitude);
+
+          //Black icon that will be the icon for the marker used to display the user's to make viewing easier
+          var blackIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
+
+          map.flyTo(myLatLon, 16);
+          if (locationMarker) {
+            map.removeLayer(locationMarker);
+          }
+          locationMarker = L.marker(myLatLon, {icon: blackIcon}).addTo(map);
+          if (circle) {
+          map.removeLayer(circle);
+          }
+          circle = L.circle(myLatLon, {
+          color: 'blue',
+          fillColor: 'blue',
+          fillOpacity: 0.3,
+          radius: pos.coords.accuracy
+          }).addTo(map);
+          $(".toast-body").html("Found location<br>Lat: " + myLatLon.lat + " Lon: " + myLatLon.lng);
+          $(".toast").toast('show');
+      }
+
+      function find_nearestplace(map, pos) {
+          var locString = pos.coords.latitude + ", " + pos.coords.longitude;
+          const nearest_found = document.getElementById('nearest_found');
+
+          $.ajax({
+               url: HOST + '/nearest_data/',
+               type: 'GET',
+               headers: {
+                  'X-CSRFToken': "{{ csrf_token }}"
+               },
+               dataType: 'json',
+               data: {
+                   point : locString
+               },
+               success: function(data) {
+                    var redIcon = new L.Icon({
+                      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                      iconSize: [25, 41],
+                      iconAnchor: [12, 41],
+                      popupAnchor: [1, -34],
+                      shadowSize: [41, 41]
+                    });
+
+                    var nearestGeoJSON = JSON.parse(data['Nearest Place']);
+                    const nearest_marker = L.marker(nearestGeoJSON.features[0].geometry.coordinates, { icon: redIcon }).addTo(map);
+
+                    nearest_marker.bindPopup(`
+                    <p><strong>${nearestGeoJSON.features[0].properties.name}</strong></p>
+                    <p>Location: [${nearestGeoJSON.features[0].geometry.coordinates}]</p>
+                `);
+
+                $(nearest_found).text(
+                            "Nearest place found as: " + nearestGeoJSON.features[0].properties.name
+                               + " at co-ordinates: " + "[" + nearestGeoJSON.features[0].geometry.coordinates + "]");
+
+               }
+          });
+      }
+
+
+      function update_db(pos) {
+          var locString = pos.coords.longitude + ", " + pos.coords.latitude;
+          $.ajax({
+              type: "POST",
+              headers: {
+              'X-CSRFToken': "{{ csrf_token }}"
+              },
+          url: HOST + "/updatedb/",
+          data: {
+          point: locString
+          }
+          }).done(function (data, status, xhr) {
+          console.log(data["message"])
+          var originalMsg = $(".toast-body").html();
+          $(".toast-body").html(originalMsg + "<br/>Updated database<br/>" + data["message"]);
+          }).fail(function (xhr, status, error) {
+          console.log(error);
+          var originalMsg = $(".toast-body").html();
+          $(".toast-body").html(originalMsg + "<br/>" + error);
+          }).always(function () {
+          console.log("find_loc_ed finished");
+          $(".toast").toast('show');
+          });
+      }
+      function updateLocation(map) {
+          navigator.geolocation.getCurrentPosition(
+          function (pos) {
+          setMapToCurrentLocation(map, pos);
+          update_db(pos);
+          find_nearestplace(map, pos);
+
+      },
+      function (err) { },
+      {
+        enableHighAccuracy: true,
+        timeout: 30000
+      }
+    );
+  }
+  </script>
+
+    {% leaflet_map "yourmap" callback="window.map_init_basic"%}
+    <p style="text-align: center;">*Markers showcasing the first 25 (hotels, restaurants), 15 Libraries and 5 parks from the dataset</p><br>
+    <p style="text-align:center;"><img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png"><p id = "nearest_found" style="text-align:center;"></p></p>
+    <p style="text-align: center;">Note:
+        <img  src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png">
+        = hotel, <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png"> = restaurant,
+        <img  src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png">
+        = libraries, <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png"> = parks
+    </p>
+
+    <!-- Creating a search bar and centering the div accordingly -->
+      <div style="margin: auto; width:50%;">
+        <br><br><h2 style="text-align:center;">Search places of rest in Ireland..</h2><br>
+        <form id = "SearchForm" method="post" action="/search_data">
+            <div class="input-group d-flex justify-content-center">
+            <div id="search-area" class="col-8 input-group">
+              <input type="search" id="search-bar" placeholder="Search place of rest name..." class="form-control">
+              <div class="input-group-append">
+                  <button type="submit" value="submit" class="btn btn-primary" style="padding-right: 10px;">
+                      <i class="fa fa-search"></i>
+                  </button>
+              </div>
+            </div>
+            </div>
+        </form>
+      <br><p id = "searched_found" style="text-align:center;"></p>
+      </div>
+  {% else %}
+    <p>You are not logged in</p>
+    <a href="{% url 'login' %}">Log In</a>
+  {% endif %}
+{% endblock %}
